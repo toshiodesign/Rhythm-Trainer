@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RhythmTrainer">
     <meta name="format-detection" content="telephone=no">
 
-    <title>Rhythm Trainer V9 (Dynamic Random)</title>
+    <title>Rhythm Trainer V9 (Snare Sound)</title>
     <style>
         :root {
             --bg-color: #f8fafc;
@@ -28,18 +27,17 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* 修改: 垂直置中，更像 App 介面 */
             justify-content: center; 
             padding: 20px;
             margin: 0;
             min-height: 100vh;
             
-            /* 關鍵修改 3: iPad 觸控優化 */
-            -webkit-user-select: none; /* 禁止選取文字 */
+            /* iPad 觸控優化 */
+            -webkit-user-select: none;
             user-select: none;
-            touch-action: manipulation; /* 優化觸控，防止雙擊縮放 */
-            overscroll-behavior: none; /* 禁止橡皮筋彈性捲動效果 */
-            -webkit-tap-highlight-color: transparent; /* 移除點擊高亮 */
+            touch-action: manipulation;
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* --- 控制面板 --- */
@@ -50,7 +48,7 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 960px;
-            margin-bottom: 30px; /*稍微縮小間距適應iPad螢幕*/
+            margin-bottom: 30px;
             display: flex;
             flex-wrap: wrap;
             gap: 30px;
@@ -73,7 +71,7 @@
 
         .beat-card {
             background-color: var(--panel-bg); border: 2px solid var(--border-color); border-radius: 16px;
-            width: 150px; height: 150px; /* 稍微縮小一點點以防 iPad 直式擁擠 */
+            width: 150px; height: 150px;
             display: flex; justify-content: center; align-items: center;
             transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
@@ -81,7 +79,6 @@
             background-color: var(--active-color); border-color: #22c55e;
             transform: translateY(-4px) scale(1.05); box-shadow: 0 10px 15px rgba(34, 197, 94, 0.3);
         }
-        /* 變化時的動畫效果 */
         .beat-card.changing {
             animation: flash 0.3s ease-out;
         }
@@ -105,7 +102,7 @@
         .btn-circle.playing { background-color: #ef4444; }
 
         .btn-pill {
-            padding: 12px 28px; /* 加大觸控區域 */
+            padding: 12px 28px;
             border-radius: 50px; border: 2px solid var(--border-color); background: white;
             font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;
             font-size: 1rem;
@@ -117,16 +114,14 @@
         .library-panel { background: var(--panel-bg); width: 100%; max-width: 960px; border-radius: 20px; padding: 24px; border: 1px solid var(--border-color); transition: all 0.3s ease; }
         .library-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
         
-        /* 收合動畫控制 */
         .pattern-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); /* 稍微縮小以適應更多內容 */
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
             gap: 12px; 
             overflow: hidden;
             transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
             max-height: 2000px;
             opacity: 1;
-            /* 讓 library 內部可以捲動，但不影響整個頁面 */
             overflow-y: auto; 
             -webkit-overflow-scrolling: touch;
         }
@@ -148,7 +143,6 @@
         .btn-sm { padding: 8px 16px; font-size: 0.9rem; border-radius: 20px; border: 1px solid #cbd5e1; background: white; cursor: pointer; }
         .btn-sm:hover { background: #f8fafc; }
 
-        /* 確保所有可點擊元素沒有高亮框 */
         button, input, select, .beat-card, .pattern-item {
             outline: none;
             -webkit-tap-highlight-color: transparent;
@@ -223,7 +217,6 @@
     <script src="rhythm_data_8.js"></script>
 
     <script>
-        // --- 核心變數 ---
         let audioCtx;
         let isPlaying = false;
         let bpm = 100;
@@ -246,7 +239,6 @@
         const libTitle = document.getElementById('libTitle');
         const playBtn = document.getElementById('playBtn');
 
-        // 等待所有資源載入
         window.addEventListener('load', () => {
             if (!window.ALL_PATTERNS || window.ALL_PATTERNS.length === 0) {
                 libraryGrid.innerHTML = "<div style='color:red;'>請確認 rhythm_data.js 檔案是否存在</div>";
@@ -258,7 +250,6 @@
         });
 
         // --- Library UI Logic ---
-        
         function toggleLibrary() {
             const grid = document.getElementById('libraryGrid');
             const btn = document.getElementById('toggleLibBtn');
@@ -297,7 +288,7 @@
         function renderLibrary() {
             libraryGrid.innerHTML = '';
             const patternsToShow = window.ALL_PATTERNS.filter(p => p.type === currentMode);
-            activePatternIDs = patternsToShow.map(p => p.id); // 預設全選
+            activePatternIDs = patternsToShow.map(p => p.id); // Default Select All
 
             if (patternsToShow.length === 0) {
                 libraryGrid.innerHTML = "<div>無資料</div>";
@@ -322,7 +313,6 @@
         }
 
         // --- Rhythm Logic ---
-
         function generateRhythm() {
             if (activePatternIDs.length === 0) return;
             currentMeasure = [];
@@ -340,34 +330,72 @@
             }
         }
 
-        // --- Audio & Scheduler ---
-
+        // --- Audio Logic ---
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
+        // ★★★ 核心修改：使用 Noise + Filter 製作小鼓音色 ★★★
         function playSound(time, type) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
 
             if (type === 'kick') {
+                // Kick (大鼓) - 保持不變
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
                 osc.frequency.setValueAtTime(150, time);
                 osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
                 gain.gain.setValueAtTime(volume, time);
                 gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+                osc.start(time);
+                osc.stop(time + 0.5);
             } else {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(800, time);
-                gain.gain.setValueAtTime(volume * 0.7, time);
-                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+                // Snare (小鼓) - 取代原本的 Triangle Wave
+                
+                // 1. 響弦 (Noise) 部分
+                const bufferSize = audioCtx.sampleRate * 0.5; // 0.5秒緩衝
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1; // 白噪音
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                // 濾波器：保留高頻，模擬小鼓的清脆感
+                const noiseFilter = audioCtx.createBiquadFilter();
+                noiseFilter.type = 'highpass';
+                noiseFilter.frequency.value = 800; 
+
+                // 響弦的音量包絡
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(volume * 0.8, time);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.2); // 快速衰減
+
+                noise.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start(time);
+
+                // 2. 鼓身 (Body) 部分 - 增加打擊感
+                const bodyOsc = audioCtx.createOscillator();
+                bodyOsc.type = 'triangle';
+                bodyOsc.frequency.setValueAtTime(250, time); // 小鼓基頻
+                
+                const bodyGain = audioCtx.createGain();
+                bodyGain.gain.setValueAtTime(volume * 0.5, time);
+                bodyGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); // 非常短促
+
+                bodyOsc.connect(bodyGain);
+                bodyGain.connect(audioCtx.destination);
+                bodyOsc.start(time);
+                bodyOsc.stop(time + 0.2);
             }
-            osc.start(time);
-            osc.stop(time + 0.5);
         }
 
+        // --- Scheduler ---
         function scheduler() {
             while (nextBeatTime < audioCtx.currentTime + 0.1) {
                 const beatDuration = 60.0 / bpm;
@@ -389,6 +417,7 @@
                 const pattern = currentMeasure[currentBeatIndex];
                 if (pattern && pattern.events) {
                     pattern.events.forEach(ratio => {
+                        // 這裡傳入 'note' 會觸發新的小鼓音色
                         playSound(nextBeatTime + (ratio * beatDuration), 'note');
                     });
                 }
@@ -397,32 +426,22 @@
                 nextBeatTime += beatDuration;
                 currentBeatIndex++;
 
-                // 4. Loop & Single Beat Randomization Logic
+                // 4. Randomization Logic
                 if (currentBeatIndex >= beatsPerBar) {
                     currentBeatIndex = 0;
-                    
-                    // *** 這裡修改為：以單拍為單位進行隨機變換 ***
                     if (shuffleProb > 0 && activePatternIDs.length > 0) {
-                        // 在小節結束後，延遲一點點時間再更新 UI，以免視覺跳動太快
                         setTimeout(() => {
-                            // 遍歷每一拍
                             for (let i = 0; i < beatsPerBar; i++) {
-                                // 每一拍獨立骰骰子
                                 if (Math.random() * 100 < shuffleProb) {
-                                    // 產生新拍子
                                     const randId = activePatternIDs[Math.floor(Math.random() * activePatternIDs.length)];
                                     const newPattern = window.ALL_PATTERNS.find(p => p.id === randId);
-                                    
                                     if (newPattern) {
-                                        // 更新資料
                                         currentMeasure[i] = newPattern;
-                                        // 更新 UI
                                         const card = displayArea.children[i];
                                         if (card) {
                                             card.innerHTML = `<div class="svg-container">${newPattern.svg}</div>`;
-                                            // 加個閃爍特效提示這一拍變了
                                             card.classList.remove('changing');
-                                            void card.offsetWidth; // trigger reflow
+                                            void card.offsetWidth;
                                             card.classList.add('changing');
                                         }
                                     }
@@ -436,7 +455,8 @@
         }
 
         // --- Event Listeners ---
-        playBtn.addEventListener('click', () => {
+        playBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // 防止iOS點擊閃爍
             if (isPlaying) {
                 isPlaying = false;
                 playBtn.classList.remove('playing');
