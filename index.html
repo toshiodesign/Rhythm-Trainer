@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RhythmTrainer">
+    <meta name="format-detection" content="telephone=no">
+
+    <title>Rhythm Trainer V9 (Dynamic Random)</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --primary-color: #3b82f6;
+            --active-color: #86efac;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* 修改: 垂直置中，更像 App 介面 */
+            justify-content: center; 
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+            
+            /* 關鍵修改 3: iPad 觸控優化 */
+            -webkit-user-select: none; /* 禁止選取文字 */
+            user-select: none;
+            touch-action: manipulation; /* 優化觸控，防止雙擊縮放 */
+            overscroll-behavior: none; /* 禁止橡皮筋彈性捲動效果 */
+            -webkit-tap-highlight-color: transparent; /* 移除點擊高亮 */
+        }
+
+        /* --- 控制面板 --- */
+        .controls-wrapper {
+            background: var(--panel-bg);
+            padding: 24px 32px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 960px;
+            margin-bottom: 30px; /*稍微縮小間距適應iPad螢幕*/
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .control-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+
+        select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; cursor: pointer; min-width: 140px; }
+        input[type="range"] { accent-color: var(--primary-color); cursor: pointer; width: 140px; }
+        .val-display { font-variant-numeric: tabular-nums; font-weight: bold; color: var(--primary-color); }
+
+        /* --- 顯示區域 --- */
+        .rhythm-stage {
+            display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;
+            width: 100%; max-width: 1000px; min-height: 180px; margin-bottom: 30px; padding: 20px;
+        }
+
+        .beat-card {
+            background-color: var(--panel-bg); border: 2px solid var(--border-color); border-radius: 16px;
+            width: 150px; height: 150px; /* 稍微縮小一點點以防 iPad 直式擁擠 */
+            display: flex; justify-content: center; align-items: center;
+            transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .beat-card.active {
+            background-color: var(--active-color); border-color: #22c55e;
+            transform: translateY(-4px) scale(1.05); box-shadow: 0 10px 15px rgba(34, 197, 94, 0.3);
+        }
+        /* 變化時的動畫效果 */
+        .beat-card.changing {
+            animation: flash 0.3s ease-out;
+        }
+        @keyframes flash {
+            0% { background-color: #fcd34d; transform: scale(0.95); }
+            100% { background-color: var(--panel-bg); transform: scale(1); }
+        }
+        
+        .beat-card .svg-container { width: 85%; height: 85%; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+        .beat-card svg { width: 100%; height: 100%; fill: currentColor; color: var(--text-main); }
+
+        /* --- 播放控制 --- */
+        .playback-bar { display: flex; align-items: center; gap: 24px; margin-bottom: 30px; }
+        
+        .btn-circle {
+            width: 80px; height: 80px; border-radius: 50%; border: none; background: var(--text-main); color: white;
+            font-size: 2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.1s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .btn-circle:active { transform: scale(0.95); }
+        .btn-circle.playing { background-color: #ef4444; }
+
+        .btn-pill {
+            padding: 12px 28px; /* 加大觸控區域 */
+            border-radius: 50px; border: 2px solid var(--border-color); background: white;
+            font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;
+            font-size: 1rem;
+        }
+        .btn-pill:hover { background: #f1f5f9; }
+        .btn-pill.active { background: #dbeafe; border-color: var(--primary-color); color: var(--primary-color); }
+
+        /* --- 節奏庫 --- */
+        .library-panel { background: var(--panel-bg); width: 100%; max-width: 960px; border-radius: 20px; padding: 24px; border: 1px solid var(--border-color); transition: all 0.3s ease; }
+        .library-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        
+        /* 收合動畫控制 */
+        .pattern-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); /* 稍微縮小以適應更多內容 */
+            gap: 12px; 
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 2000px;
+            opacity: 1;
+            /* 讓 library 內部可以捲動，但不影響整個頁面 */
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .pattern-grid.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .pattern-item {
+            aspect-ratio: 1; border: 2px solid transparent; background: #f1f5f9; border-radius: 12px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 8px; transition: 0.2s;
+        }
+        .pattern-item:hover { background: #e2e8f0; }
+        .pattern-item.selected { background: #dcfce7; border-color: #22c55e; }
+        .pattern-item svg { width: 100%; height: 100%; pointer-events: none; }
+
+        .btn-sm { padding: 8px 16px; font-size: 0.9rem; border-radius: 20px; border: 1px solid #cbd5e1; background: white; cursor: pointer; }
+        .btn-sm:hover { background: #f8fafc; }
+
+        /* 確保所有可點擊元素沒有高亮框 */
+        button, input, select, .beat-card, .pattern-item {
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="controls-wrapper">
+        <div class="control-group">
+            <span class="control-label">Time Signature</span>
+            <select id="timeSigSelect">
+                <option value="4/4" selected>4/4 (Simple)</option>
+                <option value="2/4">2/4 (Simple)</option>
+                <option value="3/4">3/4 (Simple)</option>
+                <option value="5/4">5/4 (Simple)</option>
+                <option disabled>──────────</option>
+                <option value="6/8">6/8 (Compound)</option>
+                <option value="9/8">9/8 (Compound)</option>
+                <option value="12/8">12/8 (Compound)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <span class="control-label">BPM: <span id="bpmDisplay" class="val-display">100</span></span>
+            <input type="range" id="bpmSlider" min="40" max="200" value="100">
+        </div>
+        <div class="control-group">
+            <span class="control-label">Volume</span>
+            <input type="range" id="volSlider" min="0" max="100" value="80">
+        </div>
+        <div class="control-group">
+            <span class="control-label">Random: <span id="shuffleDisplay" class="val-display">0%</span></span>
+            <input type="range" id="shuffleSlider" min="0" max="100" value="0">
+        </div>
+    </div>
+
+    <div class="rhythm-stage" id="displayArea"></div>
+
+    <div class="playback-bar">
+        <button class="btn-pill" onclick="generateRhythm()"><span>⟳</span> Randomize All</button>
+        <button class="btn-circle" id="playBtn">▶</button>
+        <button class="btn-pill active" id="kickBtn"><span>🥁</span> Kick</button>
+    </div>
+
+    <div class="library-panel">
+        <div class="library-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button class="btn-sm" onclick="toggleLibrary()" id="toggleLibBtn" title="Toggle Library">▼</button>
+                <span class="library-title" id="libTitle">Pattern Library</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-sm" onclick="selectAllPatterns()">Select All</button>
+                <button class="btn-sm" onclick="deselectAllPatterns()">Deselect All</button>
+            </div>
+        </div>
+        <div class="pattern-grid" id="libraryGrid">
+            </div>
+    </div>
+
+    <script>
+        window.ALL_PATTERNS = [];
+    </script>
+
+    <script src="rhythm_data_1.js"></script>
+    <script src="rhythm_data_2.js"></script>
+    <script src="rhythm_data_3.js"></script>
+    <script src="rhythm_data_4.js"></script>
+    <script src="rhythm_data_5.js"></script>
+    <script src="rhythm_data_6.js"></script>
+    <script src="rhythm_data_7.js"></script>
+    <script src="rhythm_data_8.js"></script>
+
+    <script>
+        // --- 核心變數 ---
+        let audioCtx;
+        let isPlaying = false;
+        let bpm = 100;
+        let volume = 0.8;
+        let shuffleProb = 0;
+        let kickEnabled = true;
+
+        let timerID;
+        let nextBeatTime = 0;
+        let currentBeatIndex = 0;
+        let beatsPerBar = 4;
+        let currentMode = 'simple';
+        
+        let activePatternIDs = [];
+        let currentMeasure = [];
+
+        // UI Refs
+        const displayArea = document.getElementById('displayArea');
+        const libraryGrid = document.getElementById('libraryGrid');
+        const libTitle = document.getElementById('libTitle');
+        const playBtn = document.getElementById('playBtn');
+
+        // 等待所有資源載入
+        window.addEventListener('load', () => {
+            if (!window.ALL_PATTERNS || window.ALL_PATTERNS.length === 0) {
+                libraryGrid.innerHTML = "<div style='color:red;'>請確認 rhythm_data.js 檔案是否存在</div>";
+                return;
+            }
+            window.ALL_PATTERNS.sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric: true, sensitivity: 'base'}));
+            updateTimeSignature();
+            generateRhythm();
+        });
+
+        // --- Library UI Logic ---
+        
+        function toggleLibrary() {
+            const grid = document.getElementById('libraryGrid');
+            const btn = document.getElementById('toggleLibBtn');
+            grid.classList.toggle('collapsed');
+            btn.innerText = grid.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function deselectAllPatterns() {
+            const items = document.querySelectorAll('.pattern-item');
+            activePatternIDs = [];
+            items.forEach(el => el.classList.remove('selected'));
+        }
+
+        function selectAllPatterns() {
+            const items = document.querySelectorAll('.pattern-item');
+            const patternsToShow = window.ALL_PATTERNS.filter(p => p.type === currentMode);
+            activePatternIDs = patternsToShow.map(p => p.id);
+            items.forEach(el => el.classList.add('selected'));
+        }
+
+        function updateTimeSignature() {
+            const val = document.getElementById('timeSigSelect').value;
+            const [num, den] = val.split('/').map(Number);
+            if (den === 8 && num % 3 === 0) {
+                currentMode = 'compound';
+                beatsPerBar = num / 3;
+                libTitle.innerText = `Compound Meter Patterns (${val})`;
+            } else {
+                currentMode = 'simple';
+                beatsPerBar = num;
+                libTitle.innerText = `Simple Meter Patterns (${val})`;
+            }
+            renderLibrary();
+        }
+
+        function renderLibrary() {
+            libraryGrid.innerHTML = '';
+            const patternsToShow = window.ALL_PATTERNS.filter(p => p.type === currentMode);
+            activePatternIDs = patternsToShow.map(p => p.id); // 預設全選
+
+            if (patternsToShow.length === 0) {
+                libraryGrid.innerHTML = "<div>無資料</div>";
+                return;
+            }
+
+            patternsToShow.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'pattern-item selected';
+                div.innerHTML = p.svg; 
+                div.title = p.name;
+                div.onclick = () => {
+                    div.classList.toggle('selected');
+                    if (activePatternIDs.includes(p.id)) {
+                        activePatternIDs = activePatternIDs.filter(id => id !== p.id);
+                    } else {
+                        activePatternIDs.push(p.id);
+                    }
+                };
+                libraryGrid.appendChild(div);
+            });
+        }
+
+        // --- Rhythm Logic ---
+
+        function generateRhythm() {
+            if (activePatternIDs.length === 0) return;
+            currentMeasure = [];
+            displayArea.innerHTML = '';
+            for (let i = 0; i < beatsPerBar; i++) {
+                const randId = activePatternIDs[Math.floor(Math.random() * activePatternIDs.length)];
+                const patternObj = window.ALL_PATTERNS.find(p => p.id === randId);
+                if (patternObj) {
+                    currentMeasure.push(patternObj);
+                    const card = document.createElement('div');
+                    card.className = 'beat-card';
+                    card.innerHTML = `<div class="svg-container">${patternObj.svg}</div>`;
+                    displayArea.appendChild(card);
+                }
+            }
+        }
+
+        // --- Audio & Scheduler ---
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(time, type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'kick') {
+                osc.frequency.setValueAtTime(150, time);
+                osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+                gain.gain.setValueAtTime(volume, time);
+                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+            } else {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, time);
+                gain.gain.setValueAtTime(volume * 0.7, time);
+                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+            }
+            osc.start(time);
+            osc.stop(time + 0.5);
+        }
+
+        function scheduler() {
+            while (nextBeatTime < audioCtx.currentTime + 0.1) {
+                const beatDuration = 60.0 / bpm;
+                const currentIdx = currentBeatIndex;
+                const visualDelay = (nextBeatTime - audioCtx.currentTime) * 1000;
+                
+                // 1. Visual Highlight
+                setTimeout(() => {
+                    const cards = document.querySelectorAll('.beat-card');
+                    cards.forEach((c, i) => {
+                        if (i === currentIdx) c.classList.add('active');
+                        else c.classList.remove('active');
+                    });
+                }, Math.max(0, visualDelay));
+
+                // 2. Play Audio
+                if (kickEnabled) playSound(nextBeatTime, 'kick');
+
+                const pattern = currentMeasure[currentBeatIndex];
+                if (pattern && pattern.events) {
+                    pattern.events.forEach(ratio => {
+                        playSound(nextBeatTime + (ratio * beatDuration), 'note');
+                    });
+                }
+
+                // 3. Advance
+                nextBeatTime += beatDuration;
+                currentBeatIndex++;
+
+                // 4. Loop & Single Beat Randomization Logic
+                if (currentBeatIndex >= beatsPerBar) {
+                    currentBeatIndex = 0;
+                    
+                    // *** 這裡修改為：以單拍為單位進行隨機變換 ***
+                    if (shuffleProb > 0 && activePatternIDs.length > 0) {
+                        // 在小節結束後，延遲一點點時間再更新 UI，以免視覺跳動太快
+                        setTimeout(() => {
+                            // 遍歷每一拍
+                            for (let i = 0; i < beatsPerBar; i++) {
+                                // 每一拍獨立骰骰子
+                                if (Math.random() * 100 < shuffleProb) {
+                                    // 產生新拍子
+                                    const randId = activePatternIDs[Math.floor(Math.random() * activePatternIDs.length)];
+                                    const newPattern = window.ALL_PATTERNS.find(p => p.id === randId);
+                                    
+                                    if (newPattern) {
+                                        // 更新資料
+                                        currentMeasure[i] = newPattern;
+                                        // 更新 UI
+                                        const card = displayArea.children[i];
+                                        if (card) {
+                                            card.innerHTML = `<div class="svg-container">${newPattern.svg}</div>`;
+                                            // 加個閃爍特效提示這一拍變了
+                                            card.classList.remove('changing');
+                                            void card.offsetWidth; // trigger reflow
+                                            card.classList.add('changing');
+                                        }
+                                    }
+                                }
+                            }
+                        }, Math.max(0, visualDelay + beatDuration * 800)); 
+                    }
+                }
+            }
+            if (isPlaying) timerID = requestAnimationFrame(scheduler);
+        }
+
+        // --- Event Listeners ---
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                isPlaying = false;
+                playBtn.classList.remove('playing');
+                playBtn.innerText = "▶";
+                document.querySelectorAll('.beat-card').forEach(c => c.classList.remove('active'));
+            } else {
+                initAudio();
+                isPlaying = true;
+                playBtn.classList.add('playing');
+                playBtn.innerText = "■";
+                currentBeatIndex = 0;
+                nextBeatTime = audioCtx.currentTime + 0.1;
+                scheduler();
+            }
+        });
+
+        document.getElementById('kickBtn').addEventListener('click', (e) => {
+            kickEnabled = !kickEnabled;
+            e.currentTarget.classList.toggle('active');
+        });
+        document.getElementById('timeSigSelect').addEventListener('change', () => { updateTimeSignature(); generateRhythm(); });
+        document.getElementById('bpmSlider').addEventListener('input', (e) => { bpm = parseInt(e.target.value); document.getElementById('bpmDisplay').innerText = bpm; });
+        document.getElementById('volSlider').addEventListener('input', (e) => { volume = parseInt(e.target.value) / 100; });
+        document.getElementById('shuffleSlider').addEventListener('input', (e) => { shuffleProb = parseInt(e.target.value); document.getElementById('shuffleDisplay').innerText = shuffleProb + "%"; });
+
+    </script>
+</body>
+</html>
