@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="RhythmTrainer">
     <meta name="format-detection" content="telephone=no">
 
-    <title>Rhythm Trainer V9 (Snare Sound)</title>
+    <title>Rhythm Trainer V9 (Clap & Split Vol)</title>
     <style>
         :root {
             --bg-color: #f8fafc;
@@ -60,7 +60,7 @@
         .control-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
 
         select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; cursor: pointer; min-width: 140px; }
-        input[type="range"] { accent-color: var(--primary-color); cursor: pointer; width: 140px; }
+        input[type="range"] { accent-color: var(--primary-color); cursor: pointer; width: 120px; }
         .val-display { font-variant-numeric: tabular-nums; font-weight: bold; color: var(--primary-color); }
 
         /* --- 顯示區域 --- */
@@ -171,9 +171,14 @@
             <input type="range" id="bpmSlider" min="40" max="200" value="100">
         </div>
         <div class="control-group">
-            <span class="control-label">Volume</span>
-            <input type="range" id="volSlider" min="0" max="100" value="80">
+            <span class="control-label">Kick Vol</span>
+            <input type="range" id="kickVolSlider" min="0" max="100" value="80">
         </div>
+        <div class="control-group">
+            <span class="control-label">Clap Vol</span>
+            <input type="range" id="clapVolSlider" min="0" max="100" value="80">
+        </div>
+
         <div class="control-group">
             <span class="control-label">Random: <span id="shuffleDisplay" class="val-display">0%</span></span>
             <input type="range" id="shuffleSlider" min="0" max="100" value="0">
@@ -220,7 +225,11 @@
         let audioCtx;
         let isPlaying = false;
         let bpm = 100;
-        let volume = 0.8;
+        
+        // 分離音量變數
+        let kickVolume = 0.8;
+        let clapVolume = 0.8;
+        
         let shuffleProb = 0;
         let kickEnabled = true;
 
@@ -336,62 +345,58 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        // ★★★ 核心修改：使用 Noise + Filter 製作小鼓音色 ★★★
         function playSound(time, type) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
             if (type === 'kick') {
-                // Kick (大鼓) - 保持不變
+                // --- Kick (大鼓) ---
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
+                
                 osc.frequency.setValueAtTime(150, time);
                 osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
-                gain.gain.setValueAtTime(volume, time);
+                
+                // 使用 kickVolume
+                gain.gain.setValueAtTime(kickVolume, time);
                 gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+                
                 osc.start(time);
                 osc.stop(time + 0.5);
+
             } else {
-                // Snare (小鼓) - 取代原本的 Triangle Wave
+                // --- Clap (拍手聲) ---
+                // 使用帶通濾波器(Bandpass)過濾噪音來模擬拍手
                 
-                // 1. 響弦 (Noise) 部分
-                const bufferSize = audioCtx.sampleRate * 0.5; // 0.5秒緩衝
+                // 1. 建立白噪音
+                const bufferSize = audioCtx.sampleRate * 2; 
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1; // 白噪音
+                    data[i] = Math.random() * 2 - 1; 
                 }
                 const noise = audioCtx.createBufferSource();
                 noise.buffer = buffer;
 
-                // 濾波器：保留高頻，模擬小鼓的清脆感
-                const noiseFilter = audioCtx.createBiquadFilter();
-                noiseFilter.type = 'highpass';
-                noiseFilter.frequency.value = 800; 
+                // 2. 濾波器：集中在 1000~1500Hz 左右，模擬手掌聲音
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1200; // 拍手中心頻率
+                filter.Q.value = 1; // 頻寬寬度
 
-                // 響弦的音量包絡
-                const noiseGain = audioCtx.createGain();
-                noiseGain.gain.setValueAtTime(volume * 0.8, time);
-                noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.2); // 快速衰減
+                // 3. 音量包絡 (Envelope)：非常短促的 Attack 和 Decay
+                const clapGain = audioCtx.createGain();
+                // 使用 clapVolume
+                clapGain.gain.setValueAtTime(clapVolume, time); 
+                clapGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); // 約 0.15秒的短促聲音
 
-                noise.connect(noiseFilter);
-                noiseFilter.connect(noiseGain);
-                noiseGain.connect(audioCtx.destination);
-                noise.start(time);
-
-                // 2. 鼓身 (Body) 部分 - 增加打擊感
-                const bodyOsc = audioCtx.createOscillator();
-                bodyOsc.type = 'triangle';
-                bodyOsc.frequency.setValueAtTime(250, time); // 小鼓基頻
+                // 連接線路
+                noise.connect(filter);
+                filter.connect(clapGain);
+                clapGain.connect(audioCtx.destination);
                 
-                const bodyGain = audioCtx.createGain();
-                bodyGain.gain.setValueAtTime(volume * 0.5, time);
-                bodyGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); // 非常短促
-
-                bodyOsc.connect(bodyGain);
-                bodyGain.connect(audioCtx.destination);
-                bodyOsc.start(time);
-                bodyOsc.stop(time + 0.2);
+                noise.start(time);
+                noise.stop(time + 0.2);
             }
         }
 
@@ -417,8 +422,8 @@
                 const pattern = currentMeasure[currentBeatIndex];
                 if (pattern && pattern.events) {
                     pattern.events.forEach(ratio => {
-                        // 這裡傳入 'note' 會觸發新的小鼓音色
-                        playSound(nextBeatTime + (ratio * beatDuration), 'note');
+                        // 這裡傳入 'clap' 觸發拍手聲
+                        playSound(nextBeatTime + (ratio * beatDuration), 'clap');
                     });
                 }
 
@@ -456,7 +461,7 @@
 
         // --- Event Listeners ---
         playBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // 防止iOS點擊閃爍
+            e.preventDefault(); 
             if (isPlaying) {
                 isPlaying = false;
                 playBtn.classList.remove('playing');
@@ -479,7 +484,15 @@
         });
         document.getElementById('timeSigSelect').addEventListener('change', () => { updateTimeSignature(); generateRhythm(); });
         document.getElementById('bpmSlider').addEventListener('input', (e) => { bpm = parseInt(e.target.value); document.getElementById('bpmDisplay').innerText = bpm; });
-        document.getElementById('volSlider').addEventListener('input', (e) => { volume = parseInt(e.target.value) / 100; });
+        
+        // 兩個獨立音量滑軌的監聽器
+        document.getElementById('kickVolSlider').addEventListener('input', (e) => { 
+            kickVolume = parseInt(e.target.value) / 100; 
+        });
+        document.getElementById('clapVolSlider').addEventListener('input', (e) => { 
+            clapVolume = parseInt(e.target.value) / 100; 
+        });
+
         document.getElementById('shuffleSlider').addEventListener('input', (e) => { shuffleProb = parseInt(e.target.value); document.getElementById('shuffleDisplay').innerText = shuffleProb + "%"; });
 
     </script>
