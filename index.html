@@ -5,23 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="RhythmTrainer">
+    <meta name="apple-mobile-web-app-title" content="PolyArchetype">
     <meta name="format-detection" content="telephone=no">
 
-    <title>Rhythm Trainer V9 (Clap & Split Vol)</title>
+    <title>Rhythm Archetype (Neural Style)</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
         :root {
-            --bg-color: #f8fafc;
-            --panel-bg: #ffffff;
-            --primary-color: #3b82f6;
-            --active-color: #86efac;
-            --border-color: #e2e8f0;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
+            /* Neural DSP 風格色票 */
+            --bg-color: #0b0b0d;         /* 近乎全黑的背景 */
+            --panel-bg: #141416;         /* 機櫃面板色 */
+            --border-color: #333333;     /* 暗淡的邊框線 */
+            --line-active: #ffffff;      /* 啟動時的亮白線條 */
+            --accent-glow: rgba(255, 255, 255, 0.4); /* 白光暈 */
+            --accent-secondary: #00e0ff; /* 數位感的青色 (選用) */
+            
+            --text-main: #e5e5e5;        /* 亮灰白文字 */
+            --text-muted: #666666;       /* 暗灰文字 */
+            
+            --fader-track: #2a2a2a;
+            --knob-color: #d1d5db;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', sans-serif; /* 乾淨的現代無襯線體 */
             background-color: var(--bg-color);
             color: var(--text-main);
             display: flex;
@@ -32,7 +40,7 @@
             margin: 0;
             min-height: 100vh;
             
-            /* iPad 觸控優化 */
+            /* iPad 優化 */
             -webkit-user-select: none;
             user-select: none;
             touch-action: manipulation;
@@ -40,113 +48,308 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- 控制面板 --- */
+        /* --- 主控制面板 (模擬 Rack 機櫃) --- */
         .controls-wrapper {
             background: var(--panel-bg);
-            padding: 24px 32px;
-            border-radius: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            /* 模擬金屬髮絲紋質感 */
+            background-image: linear-gradient(to bottom, #1a1a1c, #141416);
+            padding: 20px 40px;
+            border: 1px solid var(--border-color);
+            border-top: 1px solid #444; /* 頂部高光 */
+            border-radius: 4px; /* 極小的圓角，接近直角 */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            
             width: 100%;
-            max-width: 960px;
-            margin-bottom: 30px;
+            max-width: 900px;
+            margin-bottom: 40px;
+            
             display: flex;
             flex-wrap: wrap;
-            gap: 30px;
-            align-items: center;
-            justify-content: center;
+            gap: 40px; /* 增加間距，像硬體面板 */
+            align-items: flex-end; /* 讓標籤對齊上方 */
+            justify-content: space-around;
+            position: relative;
         }
 
-        .control-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .control-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        /* 裝飾螺絲釘 (模擬硬體) */
+        .controls-wrapper::before, .controls-wrapper::after {
+            content: '+';
+            position: absolute;
+            color: #333;
+            font-family: monospace;
+            font-size: 20px;
+            top: 10px;
+        }
+        .controls-wrapper::before { left: 15px; }
+        .controls-wrapper::after { right: 15px; }
 
-        select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; cursor: pointer; min-width: 140px; }
-        input[type="range"] { accent-color: var(--primary-color); cursor: pointer; width: 120px; }
-        .val-display { font-variant-numeric: tabular-nums; font-weight: bold; color: var(--primary-color); }
+        .control-group { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 12px; 
+            position: relative;
+        }
+        
+        /* 垂直分隔線 */
+        .control-group:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: 10%;
+            height: 80%;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, #333, transparent);
+        }
 
-        /* --- 顯示區域 --- */
+        .control-label { 
+            font-size: 0.7rem; 
+            font-weight: 600; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            letter-spacing: 2px; /* 寬字距 */
+            margin-bottom: 5px;
+        }
+
+        /* --- 替換 Select 樣式 --- */
+        select { 
+            appearance: none;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 30px 8px 15px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            border-radius: 2px;
+            cursor: pointer;
+            text-align: center;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px top 50%;
+            background-size: 10px auto;
+        }
+        select:focus { outline: none; border-color: var(--text-muted); }
+
+        /* --- 線條化 Slider (Fader Style) --- */
+        input[type="range"] { 
+            -webkit-appearance: none;
+            width: 120px; 
+            background: transparent;
+            height: 20px; /* 增加觸控高度 */
+        }
+        
+        /* 軌道 Track */
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            background: var(--fader-track);
+            border-radius: 0;
+        }
+        
+        /* 推桿 Thumb */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 6px;
+            border-radius: 1px;
+            background: var(--text-main);
+            margin-top: -7px; /* 置中 */
+            box-shadow: 0 0 5px rgba(255,255,255,0.3);
+            border: none;
+            cursor: pointer;
+        }
+
+        .val-display { 
+            font-family: 'Courier New', monospace; 
+            font-size: 0.8rem;
+            color: var(--line-active);
+            text-shadow: 0 0 5px var(--accent-glow);
+        }
+
+        /* --- 顯示區域 (Screen) --- */
         .rhythm-stage {
-            display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;
-            width: 100%; max-width: 1000px; min-height: 180px; margin-bottom: 30px; padding: 20px;
+            display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;
+            width: 100%; max-width: 1000px; min-height: 180px; 
+            margin-bottom: 40px; padding: 30px;
+            
+            /* 螢幕感 */
+            background: #080808;
+            border: 1px solid #222;
+            border-radius: 4px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
         }
 
         .beat-card {
-            background-color: var(--panel-bg); border: 2px solid var(--border-color); border-radius: 16px;
-            width: 150px; height: 150px;
+            background-color: transparent; 
+            /* 線框風格 */
+            border: 1px solid #333; 
+            border-radius: 4px;
+            width: 140px; height: 140px;
             display: flex; justify-content: center; align-items: center;
-            transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.1s ease;
+            position: relative;
         }
+        
+        /* 播放時的高亮：白色發光線條 */
         .beat-card.active {
-            background-color: var(--active-color); border-color: #22c55e;
-            transform: translateY(-4px) scale(1.05); box-shadow: 0 10px 15px rgba(34, 197, 94, 0.3);
+            border-color: var(--line-active);
+            box-shadow: 0 0 15px var(--accent-glow), inset 0 0 10px rgba(255,255,255,0.1);
+            background-color: rgba(255,255,255,0.02);
+            transform: scale(1.02);
         }
+        
+        /* 隨機變換時的動畫 */
         .beat-card.changing {
-            animation: flash 0.3s ease-out;
+            animation: glitch 0.2s linear;
         }
-        @keyframes flash {
-            0% { background-color: #fcd34d; transform: scale(0.95); }
-            100% { background-color: var(--panel-bg); transform: scale(1); }
+        @keyframes glitch {
+            0% { border-color: #333; opacity: 0.5; }
+            50% { border-color: var(--accent-secondary); opacity: 1; }
+            100% { border-color: #333; opacity: 1; }
         }
         
-        .beat-card .svg-container { width: 85%; height: 85%; display: flex; justify-content: center; align-items: center; pointer-events: none; }
-        .beat-card svg { width: 100%; height: 100%; fill: currentColor; color: var(--text-main); }
+        /* SVG 線條優化 */
+        .beat-card .svg-container { width: 70%; height: 70%; opacity: 0.4; transition: opacity 0.1s; }
+        .beat-card.active .svg-container { opacity: 1; filter: drop-shadow(0 0 5px rgba(255,255,255,0.6)); }
+        .beat-card svg { width: 100%; height: 100%; fill: var(--text-main); }
 
-        /* --- 播放控制 --- */
-        .playback-bar { display: flex; align-items: center; gap: 24px; margin-bottom: 30px; }
+
+        /* --- 底部踏板區 (Footswitches) --- */
+        .playback-bar { 
+            display: flex; align-items: center; gap: 30px; margin-bottom: 40px; 
+            background: #111;
+            padding: 15px 30px;
+            border-radius: 4px;
+            border: 1px solid #222;
+        }
         
+        /* 線條化的圓形按鈕 */
         .btn-circle {
-            width: 80px; height: 80px; border-radius: 50%; border: none; background: var(--text-main); color: white;
-            font-size: 2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.1s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            width: 70px; height: 70px; 
+            border-radius: 50%; 
+            background: transparent;
+            border: 2px solid var(--text-muted);
+            color: var(--text-muted);
+            font-size: 1.5rem; 
+            cursor: pointer; 
+            display: flex; justify-content: center; align-items: center; 
+            transition: all 0.2s;
         }
-        .btn-circle:active { transform: scale(0.95); }
-        .btn-circle.playing { background-color: #ef4444; }
+        .btn-circle:hover { border-color: var(--text-main); color: var(--text-main); }
+        
+        .btn-circle.playing { 
+            border-color: var(--line-active);
+            color: var(--line-active);
+            box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px var(--accent-glow);
+            text-shadow: 0 0 10px white;
+        }
 
+        /* 方形開關按鈕 */
         .btn-pill {
-            padding: 12px 28px;
-            border-radius: 50px; border: 2px solid var(--border-color); background: white;
-            font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;
-            font-size: 1rem;
+            padding: 10px 24px;
+            border-radius: 2px; /* 方角 */
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
         }
-        .btn-pill:hover { background: #f1f5f9; }
-        .btn-pill.active { background: #dbeafe; border-color: var(--primary-color); color: var(--primary-color); }
+        
+        .btn-pill:hover { border-color: #666; color: var(--text-main); }
+        
+        /* 啟用狀態 - 底部亮條 */
+        .btn-pill.active { 
+            color: var(--line-active);
+            border-color: var(--line-active);
+            background: rgba(255,255,255,0.05);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        }
+        .btn-pill.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 2px;
+            background: var(--line-active);
+            box-shadow: 0 0 10px white;
+        }
 
-        /* --- 節奏庫 --- */
-        .library-panel { background: var(--panel-bg); width: 100%; max-width: 960px; border-radius: 20px; padding: 24px; border: 1px solid var(--border-color); transition: all 0.3s ease; }
-        .library-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        /* --- Preset Library (Presets) --- */
+        .library-panel { 
+            background: var(--panel-bg); 
+            width: 100%; max-width: 900px; 
+            border-radius: 4px; 
+            padding: 2px; /* 極細邊框感 */
+            border: 1px solid var(--border-color); 
+        }
+        
+        .library-inner {
+            background: var(--bg-color);
+            padding: 20px;
+            border-radius: 2px;
+        }
+
+        .library-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 20px; padding-bottom: 10px; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+        
+        .library-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+        }
         
         .pattern-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-            gap: 12px; 
-            overflow: hidden;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px; 
             transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
             max-height: 2000px;
             opacity: 1;
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch;
+            overflow-y: auto;
         }
-        
-        .pattern-grid.collapsed {
-            max-height: 0;
-            opacity: 0;
-            margin-top: 0;
-        }
+        .pattern-grid.collapsed { max-height: 0; opacity: 0; margin: 0; }
 
         .pattern-item {
-            aspect-ratio: 1; border: 2px solid transparent; background: #f1f5f9; border-radius: 12px;
-            cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 8px; transition: 0.2s;
+            aspect-ratio: 1; 
+            border: 1px solid #222; 
+            background: #0f0f0f;
+            border-radius: 2px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 10px; 
+            transition: 0.2s;
+            opacity: 0.5;
         }
-        .pattern-item:hover { background: #e2e8f0; }
-        .pattern-item.selected { background: #dcfce7; border-color: #22c55e; }
-        .pattern-item svg { width: 100%; height: 100%; pointer-events: none; }
-
-        .btn-sm { padding: 8px 16px; font-size: 0.9rem; border-radius: 20px; border: 1px solid #cbd5e1; background: white; cursor: pointer; }
-        .btn-sm:hover { background: #f8fafc; }
-
-        button, input, select, .beat-card, .pattern-item {
-            outline: none;
-            -webkit-tap-highlight-color: transparent;
+        .pattern-item:hover { border-color: #555; opacity: 0.8; }
+        .pattern-item.selected { 
+            border-color: var(--line-active); 
+            opacity: 1;
+            background: rgba(255,255,255,0.02);
+            box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
         }
+        .pattern-item svg { width: 100%; height: 100%; pointer-events: none; fill: var(--text-main); }
+
+        .btn-sm { 
+            padding: 5px 10px; font-size: 0.7rem; border-radius: 2px; 
+            border: 1px solid var(--border-color); 
+            background: transparent; 
+            color: var(--text-muted);
+            text-transform: uppercase;
+            cursor: pointer; 
+        }
+        .btn-sm:hover { border-color: var(--text-main); color: var(--text-main); }
+
+        /* 全局移除 focus outline，改用自定義樣式 */
+        *:focus { outline: none; }
+        
+        /* Icon 微調 */
+        .icon-text { font-size: 1.2rem; line-height: 1; margin-right: 5px; }
 
     </style>
 </head>
@@ -154,33 +357,38 @@
 
     <div class="controls-wrapper">
         <div class="control-group">
-            <span class="control-label">Time Signature</span>
+            <span class="control-label">Meter</span>
             <select id="timeSigSelect">
-                <option value="4/4" selected>4/4 (Simple)</option>
-                <option value="2/4">2/4 (Simple)</option>
-                <option value="3/4">3/4 (Simple)</option>
-                <option value="5/4">5/4 (Simple)</option>
+                <option value="4/4" selected>4/4 SIMPLE</option>
+                <option value="2/4">2/4 SIMPLE</option>
+                <option value="3/4">3/4 SIMPLE</option>
+                <option value="5/4">5/4 SIMPLE</option>
                 <option disabled>──────────</option>
-                <option value="6/8">6/8 (Compound)</option>
-                <option value="9/8">9/8 (Compound)</option>
-                <option value="12/8">12/8 (Compound)</option>
+                <option value="6/8">6/8 COMPOUND</option>
+                <option value="9/8">9/8 COMPOUND</option>
+                <option value="12/8">12/8 COMPOUND</option>
             </select>
         </div>
+        
         <div class="control-group">
-            <span class="control-label">BPM: <span id="bpmDisplay" class="val-display">100</span></span>
+            <span class="control-label">Tempo</span>
+            <span id="bpmDisplay" class="val-display">100</span>
             <input type="range" id="bpmSlider" min="40" max="200" value="100">
         </div>
+        
         <div class="control-group">
-            <span class="control-label">Kick Vol</span>
+            <span class="control-label">Kick</span>
             <input type="range" id="kickVolSlider" min="0" max="100" value="80">
         </div>
+        
         <div class="control-group">
-            <span class="control-label">Clap Vol</span>
+            <span class="control-label">Clap</span>
             <input type="range" id="clapVolSlider" min="0" max="100" value="80">
         </div>
 
         <div class="control-group">
-            <span class="control-label">Random: <span id="shuffleDisplay" class="val-display">0%</span></span>
+            <span class="control-label">Chaos</span>
+            <span id="shuffleDisplay" class="val-display">0%</span>
             <input type="range" id="shuffleSlider" min="0" max="100" value="0">
         </div>
     </div>
@@ -188,24 +396,34 @@
     <div class="rhythm-stage" id="displayArea"></div>
 
     <div class="playback-bar">
-        <button class="btn-pill" onclick="generateRhythm()"><span>⟳</span> Randomize All</button>
-        <button class="btn-circle" id="playBtn">▶</button>
-        <button class="btn-pill active" id="kickBtn"><span>🥁</span> Kick</button>
+        <button class="btn-pill" onclick="generateRhythm()">
+            <span class="icon-text">⟳</span> Randomize
+        </button>
+        
+        <button class="btn-circle" id="playBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        
+        <button class="btn-pill active" id="kickBtn">
+            <span class="icon-text">●</span> Kick
+        </button>
     </div>
 
     <div class="library-panel">
-        <div class="library-header">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <button class="btn-sm" onclick="toggleLibrary()" id="toggleLibBtn" title="Toggle Library">▼</button>
-                <span class="library-title" id="libTitle">Pattern Library</span>
+        <div class="library-inner">
+            <div class="library-header">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <button class="btn-sm" onclick="toggleLibrary()" id="toggleLibBtn">▼</button>
+                    <span class="library-title" id="libTitle">Pattern Library</span>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-sm" onclick="selectAllPatterns()">ALL</button>
+                    <button class="btn-sm" onclick="deselectAllPatterns()">NONE</button>
+                </div>
             </div>
-            <div style="display:flex; gap:8px;">
-                <button class="btn-sm" onclick="selectAllPatterns()">Select All</button>
-                <button class="btn-sm" onclick="deselectAllPatterns()">Deselect All</button>
-            </div>
+            <div class="pattern-grid" id="libraryGrid">
+                </div>
         </div>
-        <div class="pattern-grid" id="libraryGrid">
-            </div>
     </div>
 
     <script>
@@ -222,14 +440,12 @@
     <script src="rhythm_data_8.js"></script>
 
     <script>
+        // --- 邏輯部分保持不變，與 V9 完全相同 ---
         let audioCtx;
         let isPlaying = false;
         let bpm = 100;
-        
-        // 分離音量變數
         let kickVolume = 0.8;
         let clapVolume = 0.8;
-        
         let shuffleProb = 0;
         let kickEnabled = true;
 
@@ -238,7 +454,6 @@
         let currentBeatIndex = 0;
         let beatsPerBar = 4;
         let currentMode = 'simple';
-        
         let activePatternIDs = [];
         let currentMeasure = [];
 
@@ -250,7 +465,7 @@
 
         window.addEventListener('load', () => {
             if (!window.ALL_PATTERNS || window.ALL_PATTERNS.length === 0) {
-                libraryGrid.innerHTML = "<div style='color:red;'>請確認 rhythm_data.js 檔案是否存在</div>";
+                libraryGrid.innerHTML = "<div style='color:#666; padding:20px; font-family:monospace;'>ERROR: rhythm_data.js not loaded.</div>";
                 return;
             }
             window.ALL_PATTERNS.sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric: true, sensitivity: 'base'}));
@@ -258,7 +473,6 @@
             generateRhythm();
         });
 
-        // --- Library UI Logic ---
         function toggleLibrary() {
             const grid = document.getElementById('libraryGrid');
             const btn = document.getElementById('toggleLibBtn');
@@ -285,11 +499,11 @@
             if (den === 8 && num % 3 === 0) {
                 currentMode = 'compound';
                 beatsPerBar = num / 3;
-                libTitle.innerText = `Compound Meter Patterns (${val})`;
+                libTitle.innerText = `COMPOUND METER (${val})`;
             } else {
                 currentMode = 'simple';
                 beatsPerBar = num;
-                libTitle.innerText = `Simple Meter Patterns (${val})`;
+                libTitle.innerText = `SIMPLE METER (${val})`;
             }
             renderLibrary();
         }
@@ -297,10 +511,10 @@
         function renderLibrary() {
             libraryGrid.innerHTML = '';
             const patternsToShow = window.ALL_PATTERNS.filter(p => p.type === currentMode);
-            activePatternIDs = patternsToShow.map(p => p.id); // Default Select All
+            activePatternIDs = patternsToShow.map(p => p.id); 
 
             if (patternsToShow.length === 0) {
-                libraryGrid.innerHTML = "<div>無資料</div>";
+                libraryGrid.innerHTML = "<div style='color:#444'>NO DATA</div>";
                 return;
             }
 
@@ -321,7 +535,6 @@
             });
         }
 
-        // --- Rhythm Logic ---
         function generateRhythm() {
             if (activePatternIDs.length === 0) return;
             currentMeasure = [];
@@ -339,7 +552,6 @@
             }
         }
 
-        // --- Audio Logic ---
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -350,64 +562,44 @@
             const gain = audioCtx.createGain();
 
             if (type === 'kick') {
-                // --- Kick (大鼓) ---
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                
                 osc.frequency.setValueAtTime(150, time);
                 osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
-                
-                // 使用 kickVolume
                 gain.gain.setValueAtTime(kickVolume, time);
                 gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
-                
                 osc.start(time);
                 osc.stop(time + 0.5);
-
             } else {
-                // --- Clap (拍手聲) ---
-                // 使用帶通濾波器(Bandpass)過濾噪音來模擬拍手
-                
-                // 1. 建立白噪音
+                // Clap Sound
                 const bufferSize = audioCtx.sampleRate * 2; 
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1; 
-                }
+                for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+                
                 const noise = audioCtx.createBufferSource();
                 noise.buffer = buffer;
-
-                // 2. 濾波器：集中在 1000~1500Hz 左右，模擬手掌聲音
                 const filter = audioCtx.createBiquadFilter();
                 filter.type = 'bandpass';
-                filter.frequency.value = 1200; // 拍手中心頻率
-                filter.Q.value = 1; // 頻寬寬度
-
-                // 3. 音量包絡 (Envelope)：非常短促的 Attack 和 Decay
+                filter.frequency.value = 1200; 
+                filter.Q.value = 1; 
                 const clapGain = audioCtx.createGain();
-                // 使用 clapVolume
                 clapGain.gain.setValueAtTime(clapVolume, time); 
-                clapGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); // 約 0.15秒的短促聲音
-
-                // 連接線路
+                clapGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); 
                 noise.connect(filter);
                 filter.connect(clapGain);
                 clapGain.connect(audioCtx.destination);
-                
                 noise.start(time);
                 noise.stop(time + 0.2);
             }
         }
 
-        // --- Scheduler ---
         function scheduler() {
             while (nextBeatTime < audioCtx.currentTime + 0.1) {
                 const beatDuration = 60.0 / bpm;
                 const currentIdx = currentBeatIndex;
                 const visualDelay = (nextBeatTime - audioCtx.currentTime) * 1000;
                 
-                // 1. Visual Highlight
                 setTimeout(() => {
                     const cards = document.querySelectorAll('.beat-card');
                     cards.forEach((c, i) => {
@@ -416,22 +608,18 @@
                     });
                 }, Math.max(0, visualDelay));
 
-                // 2. Play Audio
                 if (kickEnabled) playSound(nextBeatTime, 'kick');
 
                 const pattern = currentMeasure[currentBeatIndex];
                 if (pattern && pattern.events) {
                     pattern.events.forEach(ratio => {
-                        // 這裡傳入 'clap' 觸發拍手聲
                         playSound(nextBeatTime + (ratio * beatDuration), 'clap');
                     });
                 }
 
-                // 3. Advance
                 nextBeatTime += beatDuration;
                 currentBeatIndex++;
 
-                // 4. Randomization Logic
                 if (currentBeatIndex >= beatsPerBar) {
                     currentBeatIndex = 0;
                     if (shuffleProb > 0 && activePatternIDs.length > 0) {
@@ -459,19 +647,18 @@
             if (isPlaying) timerID = requestAnimationFrame(scheduler);
         }
 
-        // --- Event Listeners ---
         playBtn.addEventListener('click', (e) => {
             e.preventDefault(); 
             if (isPlaying) {
                 isPlaying = false;
                 playBtn.classList.remove('playing');
-                playBtn.innerText = "▶";
+                playBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
                 document.querySelectorAll('.beat-card').forEach(c => c.classList.remove('active'));
             } else {
                 initAudio();
                 isPlaying = true;
                 playBtn.classList.add('playing');
-                playBtn.innerText = "■";
+                playBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
                 currentBeatIndex = 0;
                 nextBeatTime = audioCtx.currentTime + 0.1;
                 scheduler();
@@ -484,15 +671,8 @@
         });
         document.getElementById('timeSigSelect').addEventListener('change', () => { updateTimeSignature(); generateRhythm(); });
         document.getElementById('bpmSlider').addEventListener('input', (e) => { bpm = parseInt(e.target.value); document.getElementById('bpmDisplay').innerText = bpm; });
-        
-        // 兩個獨立音量滑軌的監聽器
-        document.getElementById('kickVolSlider').addEventListener('input', (e) => { 
-            kickVolume = parseInt(e.target.value) / 100; 
-        });
-        document.getElementById('clapVolSlider').addEventListener('input', (e) => { 
-            clapVolume = parseInt(e.target.value) / 100; 
-        });
-
+        document.getElementById('kickVolSlider').addEventListener('input', (e) => { kickVolume = parseInt(e.target.value) / 100; });
+        document.getElementById('clapVolSlider').addEventListener('input', (e) => { clapVolume = parseInt(e.target.value) / 100; });
         document.getElementById('shuffleSlider').addEventListener('input', (e) => { shuffleProb = parseInt(e.target.value); document.getElementById('shuffleDisplay').innerText = shuffleProb + "%"; });
 
     </script>
